@@ -14,4 +14,6 @@ Nesse exemplo eu coloquei para ele repetir a cada 2 min, e na segunda parte est�
 
 A Api utilizada para essa aplicação foi a da Binance
 
+![print tela](img/cripto.jpg)
+
 :)

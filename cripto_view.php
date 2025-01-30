@@ -14,21 +14,17 @@ try {
     exit;
 }
 
-// Obter os últimos registros de cada criptomoeda e ordená-los
-$query = "
-    SELECT symbol, price, timestamp
-    FROM crypto_prices
-    WHERE (symbol, timestamp) IN (
-        SELECT symbol, MAX(timestamp)
-        FROM crypto_prices
-        GROUP BY symbol
-    )
-    ORDER BY
-        FIELD(SUBSTRING(symbol, 1, 3), 'BTC', 'ETH', 'SOL', 'XRP'),
-        timestamp DESC
-";
+$sql = "SELECT cp1.*
+        FROM crypto_prices cp1
+        INNER JOIN (
+            SELECT symbol, MAX(timestamp) AS latest_timestamp
+            FROM crypto_prices
+            GROUP BY symbol
+        ) cp2 ON cp1.symbol = cp2.symbol AND cp1.timestamp = cp2.latest_timestamp
+        ORDER BY cp1.symbol ASC";
 
-$stmt = $pdo->query($query);
+
+$stmt = $pdo->query($sql);
 $cryptos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
@@ -61,7 +57,6 @@ $cryptos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-align: center;
             margin-bottom: 30px;
             color: #00bcd4;
-            /* Cinza elegante */
         }
 
         h1 {
@@ -109,34 +104,23 @@ $cryptos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background-color: #242931;
         }
 
-        /* Styles for Crypto Icons */
-        .crypto {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .crypto img {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-        }
-
-        .crypto-name {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: #d3d3d3;
-        }
-
-
-        .price {
+        /* Positive and Negative Colors */
+        .positive {
             color: #66bb6a;
         }
 
+        .negative {
+            color: #e57373;
+        }
 
         .updated {
             font-size: 0.85rem;
             color: #8899a6;
+        }
+
+        .price {
+            color: #66bb6a;
+
         }
 
         /* Responsive Design */
@@ -158,8 +142,11 @@ $cryptos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <thead>
                 <tr>
                     <th>#</th>
+                    <th>Logo</th>
                     <th>Criptomoeda</th>
                     <th>Preço</th>
+                    <th>Volume</th>
+                    <th>Variação (24h)</th>
                     <th>Última Atualização</th>
                 </tr>
             </thead>
@@ -167,14 +154,25 @@ $cryptos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php foreach ($cryptos as $index => $crypto): ?>
                     <tr>
                         <td><?= $index + 1 ?></td>
-                        <td class="crypto-name"><?= htmlspecialchars(substr($crypto['symbol'], 0, 3)) ?></td>
+                        <td>
+                            <img src="img/<?= htmlspecialchars($crypto['symbol']) ?>.png"
+                                alt="<?= htmlspecialchars($crypto['symbol']) ?>"
+                                width="40">
+                        </td>
+                        <td><?= htmlspecialchars(substr($crypto['symbol'], 0, 3)) ?></td>
                         <td class="price"><?= number_format($crypto['price'], 2) ?> USDT</td>
-                        <td class="updated"><?= date('d/m/Y H:i:s', strtotime($crypto['timestamp'])) ?></td>
+                        <td><?= number_format($crypto['volume_24h'], 2) ?> USDT</td>
+                        <td class="<?= ($crypto['price_change_24h'] >= 0) ? 'positive' : 'negative' ?>">
+                            <?= number_format($crypto['price_change_24h'], 2) ?>%
+                        </td>
+                        <td class="updated">
+                            <?= isset($crypto['timestamp']) ? date('d/m/Y H:i:s', strtotime($crypto['timestamp'])) : 'N/A' ?>
+                        </td>
                     </tr>
-
                 <?php endforeach; ?>
             </tbody>
         </table>
+
     </div>
 </body>
 
